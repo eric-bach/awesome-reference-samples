@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "This template creates a SNS topic that invokes a SQS
+https://docs.aws.amazon.com/sns/latest/dg/SendMessageToSQS.cloudformation.html"
+
+Resources:
+  MyTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !GetAtt 'MyQueue.Arn'
+          Protocol: sqs
+  MyQueue:
+    Type: AWS::SQS::Queue
+  MyQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: '*'
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref 'MyTopic'
+      Queues:
+        - !Ref 'MyQueue'
+Outputs:
+  MyTopicARN:
+    Value: !Ref 'MyTopic'
+  MyQueueInfo:
+    Value: !Join
+      - ' '
+      - - 'ARN:'
+        - !GetAtt 'MyQueue.Arn'
+        - 'URL:'
+        - !Ref 'MyQueue'

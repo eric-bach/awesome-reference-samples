@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates an EventBridge with a custom rule to target a Lambda function
+
+Resources:
+  EpicEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: EpicEventBus
+
+  EpicEventCreatedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Epic event bridge rule
+      Name: EpicEventCreatedRule
+      EventBusName: !Ref EpicEventBus
+      EventPattern:
+        source:
+          - custom.epicapp
+        detail-type:
+          - EpicEventCreated
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt EpicLambdaFunction.Arn
+          Id: EpicEventCreated-Target
+
+  EpicLambdaFunction:
+    DependsOn:
+      - EpicLambdaExecutionRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          exports.handler = function(event, context) {
+              console.log("That was Epic")              
+          }
+      Handler: index.handler
+      FunctionName: EpicLambdaFunction
+      Role: !GetAtt EpicLambdaExecutionRole.Arn
+      Runtime: nodejs12.x
+      Timeout: 10
+      MemorySize: 256
+
+  EpicLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EpicLambdaExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+Outputs:
+  EventBusName:
+    Description: The name of the EventBus
+    Value: !Ref EpicEventBus
+    Export:
+      Name: !Sub ${AWS::StackName}-EpicEventBus
+  EventBusRule:
+    Description: The ARN of the EventBridge Rule
+    Value: !GetAtt EpicEventCreatedRule.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-EpicEventCreatedRule
+  LambdaArn:
+    Description: The ARN of the Lambda function
+    Value: !GetAtt EpicLambdaFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-EpicLambdaFunction
